@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Lipstick Application</title>
+<style>
+  #video {
+    transform: scaleX(-1);
+    display: block;
+    margin: auto;
+    position: relative;
+  }
+  #canvas {
+    display: none;
+  }
+</style>
+</head>
+<body>
+<video id="video" autoplay></video>
+<canvas id="canvas"></canvas>
+<input type="color" id="lipstickColor" value="#ff0000">
+<script>
+  async function startCamera() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const lipstickColor = document.getElementById('lipstickColor');
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      
+      video.addEventListener('play', () => {
+        const canvasContext = canvas.getContext('2d');
+        canvas.width = video.width;
+        canvas.height = video.height;
+        
+        async function detectFace() {
+          canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const faceAPI = await faceapi.detectSingleFace(video);
+          
+          if (faceAPI) {
+            const { x, y, width, height } = faceAPI.box;
+            const lipX = x + width / 3;
+            const lipY = y + (2 * height) / 3;
+            const lipWidth = width / 3;
+            const lipHeight = height / 5;
+            
+            const color = lipstickColor.value;
+            
+            canvasContext.fillStyle = color;
+            canvasContext.fillRect(lipX, lipY, lipWidth, lipHeight);
+          }
+          
+          requestAnimationFrame(detectFace);
+        }
+        
+        detectFace();
+      });
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+    }
+  }
+  
+  // Load face-api.js model
+  Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+    faceapi.nets.faceLandmark68Net.loadFromUri('/models')
+  ]).then(startCamera);
+</script>
+</body>
+</html>
